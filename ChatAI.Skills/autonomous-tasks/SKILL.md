@@ -2,7 +2,7 @@
 name: autonomous-tasks
 description: >
   Execute autonomous tasks and manage task lifecycle with user authentication.
-  Use this skill whenever the agent receives a task file from /app/agent/tasks/active/
+  Use this skill whenever the agent receives a task file from active/
   (as the first message in a dialog) and needs to execute it, create follow-ups, or mark
   as completed. Also use when the user wants to: create a new task (provide name and pin), 
   check status of their tasks, review completed task reports, approve
@@ -22,19 +22,19 @@ and user-facing task review/approval.
 ## Architecture Loop
 
 ```
-External system -> reads /app/agent/tasks/active/*.md
+External system -> reads active/*.md
   -> sends file content as first message -> Agent receives it
   -> Agent executes task
   -> Agent decides: complete or continue?
-  -> If continue: creates new task file in /app/agent/tasks/active/ + creates its .lock file
+  -> If continue: creates new task file in active/ + creates its .lock file
                   -> removes parent's .lock file
-  -> If complete: creates report and moves to /app/agent/tasks/completed/ + removes .lock file
+  -> If complete: creates report and moves to completed/ + removes .lock file
 ```
 
 ## Directory Structure
 
 ```
-/app/agent/tasks/
+tasks/
 ├── active/                    ← Active tasks being worked on (ONLY .md files)
 │   └── task-{timestamp}-{uuid}.md
 └── completed/                 ← Completed reports AND per-task lock files
@@ -46,7 +46,7 @@ External system -> reads /app/agent/tasks/active/*.md
 
 Each active task has its own per-task lock file in `completed/`:
 - Lock file name: `<task-filename>.lock` (e.g. `task-1234567890-abc123.md.lock`)
-- Location: `/app/agent/tasks/completed/`
+- Location: `completed/`
 - Purpose: Signals to the external scheduler that this task needs processing
 - Format: JSON with task_name, filename, current_task, previous_context, owner_hash, timestamp
 
@@ -64,7 +64,7 @@ Before performing any task management action (create, list, review, approve),
 you MUST authenticate the user via:
 
 ```bash
-python /app/agent/skills/authorize-user/scripts/verify.py <username> <pin>
+python ../authorize-user/scripts/verify.py <username> <pin>
 ```
 
 The script returns JSON:
@@ -75,7 +75,7 @@ Save the `owner` and `owner_hash` for subsequent script calls.
 If the user is not registered yet, register them first:
 
 ```bash
-python /app/agent/skills/authorize-user/scripts/register.py <username> <pin>
+python ../authorize-user/scripts/register.py <username> <pin>
 ```
 
 Username accepts both Cyrillic and Latin. "Давид" → "david" automatically via transliteration.
@@ -152,7 +152,7 @@ When you receive a task file as your first message:
 ### COMPLETE (goal reached or blocked):
 
 ```bash
-python /app/agent/skills/autonomous-tasks/scripts/complete_task.py \
+python scripts/complete_task.py \
   --filename "<task_filename_from_frontmatter>" \
   --report "Summary of accomplishments. Key outputs, file refs." \
   --owner-hash "<hash_from_auth>"
@@ -164,7 +164,7 @@ User will review it.
 ### CONTINUE (more steps needed):
 
 ```bash
-python /app/agent/skills/autonomous-tasks/scripts/create_task.py \
+python scripts/create_task.py \
   --owner "<owner_name>" \
   --owner-hash "<hash_from_auth>" \
   --task-name "Same or updated name" \
@@ -215,13 +215,13 @@ User sees completed task report. Ask for feedback.
 
 **User approves (task done):**
 ```bash
-python /app/agent/skills/autonomous-tasks/scripts/update_task.py \
+python scripts/update_task.py \
   --action remove --filename "<filename>" --owner-hash "<hash>"
 ```
 
 **User rejects (needs more work):**
 ```bash
-python /app/agent/skills/autonomous-tasks/scripts/update_task.py \
+python scripts/update_task.py \
   --action restore --filename "<filename>" --owner-hash "<hash>"
 ```
 
@@ -254,7 +254,7 @@ Decision criteria:
 
 This skill uses **authorize-user** for user identity verification. The agent should:
 1. When user provides name + PIN pattern, call:
-   `python /app/agent/skills/authorize-user/scripts/verify.py <username> <pin>`
+   `python ../authorize-user/scripts/verify.py <username> <pin>`
 2. Save the returned `owner` and `owner_hash` for subsequent script calls
 3. All task scripts use `owner_hash` for ownership verification
 

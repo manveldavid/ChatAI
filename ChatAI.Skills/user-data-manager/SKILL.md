@@ -1,12 +1,12 @@
 ---
 name: user-data-manager
-description: Secure personal data storage. Stores user profiles as markdown files in /app/agent/userdata/. Use when the user wants to: save personal data (FileBrowser server details, API keys, notes, any facts) that persists across conversations; retrieve their saved data in a new conversation by providing a username and PIN code; update their profile by adding, replacing, or removing data lines. Always trigger when the user asks to "remember" their information, mentions server/cloud details from a previous conversation, or requests to "log in" to stored data. If the user says "upload to my cloud", "connect to my server", or references previously saved details — load this skill first.
+description: Secure personal data storage. Stores user profiles as markdown files in data/. Use when the user wants to: save personal data (FileBrowser server details, API keys, notes, any facts) that persists across conversations; retrieve their saved data in a new conversation by providing a username and PIN code; update their profile by adding, replacing, or removing data lines. Always trigger when the user asks to "remember" their information, mentions server/cloud details from a previous conversation, or requests to "log in" to stored data. If the user says "upload to my cloud", "connect to my server", or references previously saved details — load this skill first.
 ---
 
 # User Data Manager
 
 Stores user profiles as markdown files with PIN-based access.
-All data stored in `/app/agent/userdata/` as `.md` files.
+All data stored in `data/` as `.md` files.
 
 ## Authentication
 
@@ -14,7 +14,7 @@ This skill delegates all PIN verification to the **authorize-user** skill.
 Before any operation, authenticate via:
 
 ```bash
-python /app/agent/skills/authorize-user/scripts/verify.py <username> <pin>
+python ../authorize-user/scripts/verify.py <username> <pin>
 ```
 
 All scripts in this skill automatically delegate to authorize-user for auth.
@@ -22,7 +22,7 @@ See **authorize-user** security rules for absolute restrictions.
 
 ## File Format
 
-Each user has `/app/agent/userdata/<username>.md`:
+Each user has `data/<username>.md`:
 
 ```markdown
 # User Profile: username
@@ -50,7 +50,7 @@ Each user has `/app/agent/userdata/<username>.md`:
 Когда пользователь хочет получить доступ к своим данным:
 
 ```bash
-python /app/agent/skills/user-data-manager/scripts/verify_pin.py <username> <pin>
+python scripts/verify_pin.py <username> <pin>
 ```
 
 Скрипт делегирует авторизацию в authorize-user, затем возвращает `md_content` профиля.
@@ -58,7 +58,7 @@ python /app/agent/skills/user-data-manager/scripts/verify_pin.py <username> <pin
 ### 2. Registration
 
 ```bash
-python /app/agent/skills/user-data-manager/scripts/register_user.py <username> <pin> '<json_array_of_data_lines>'
+python scripts/register_user.py <username> <pin> '<json_array_of_data_lines>'
 ```
 
 Скрипт сначала регистрирует пользователя через authorize-user, затем создаёт .md файл профиля.
@@ -66,7 +66,7 @@ python /app/agent/skills/user-data-manager/scripts/register_user.py <username> <
 ### 3. Update Profile
 
 ```bash
-python /app/agent/skills/user-data-manager/scripts/update_profile.py <username> <pin> <action> <search_or_line> [<new_line>]
+python scripts/update_profile.py <username> <pin> <action> <search_or_line> [<new_line>]
 ```
 
 | Action | Usage |
@@ -78,7 +78,7 @@ python /app/agent/skills/user-data-manager/scripts/update_profile.py <username> 
 ### 4. Delete Profile
 
 ```bash
-python /app/agent/skills/user-data-manager/scripts/delete_profile.py <username> <pin>
+python scripts/delete_profile.py <username> <pin>
 ```
 
 ## Integration with FileBrowser

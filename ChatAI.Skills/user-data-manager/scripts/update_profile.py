@@ -10,9 +10,10 @@ Actions:
     delete    Delete a line (<search_line> is the search term)
 """
 import subprocess, json, re, sys, os, argparse
+from pathlib import Path
 
-DATA_DIR = "/app/agent/userdata"
-AUTH_SCRIPT = "/app/agent/skills/authorize-user/scripts/verify.py"
+DATA_DIR = str(Path(__file__).parent.parent / "data")
+AUTH_SCRIPT = str(Path(__file__).parent.parent.parent / "authorize-user" / "scripts" / "verify.py")
 
 PIN_PATTERNS = [
     r"(?i)pin[:\s]*\d{3,6}",
@@ -65,27 +66,24 @@ def verify_auth(username, pin):
         return False
 
 
-def extract_pin_hash(content):
-    m = re.search(r"<!-- AUTH: pin_hash=(\w+) -->", content)
-    return m.group(1) if m else None
+# extract_pin_hash used in old version - now handled in parse_content
 
 
 def parse_content(content):
     title_m = re.search(r"# User Profile:\s*(.+)", content)
     title = title_m.group(1).strip() if title_m else "unknown"
-    sections = re.split(r"\n##\s+", content)
+    # Extract pin_hash from AUTH comment
+    auth_m = re.search(r"<!-- AUTH: pin_hash=(\w+) -->", content)
+    pin_hash = auth_m.group(1) if auth_m else ""
+    # Extract data lines from the "Данные" section
     data_lines = []
-    other_sections = []
-    for section in sections:
-        if section.startswith("Данные"):
-            body = section.split("\n", 1)[1] if "\n" in section else ""
-            data_lines = [l.strip() for l in body.splitlines() if l.strip()]
-        elif section.strip() and not section.startswith("User Profile"):
-            other_sections.append(f"## {section.strip()}")
-    return title, data_lines, other_sections
+    data_section = re.search(r"##\s+Данные\s*\n(.*?)(?=\n##|\Z)", content, re.DOTALL)
+    if data_section:
+        data_lines = [l.strip() for l in data_section.group(1).splitlines() if l.strip()]
+    return title, data_lines, pin_hash
 
 
-def rebuild_content(title, pin_hash, data_lines, other_sections):
+def rebuild_content(title, pin_hash, data_lines):
     lines = [
         f"# User Profile: {title}", "",
         f"<!-- AUTH: pin_hash={pin_hash} -->", "",
@@ -93,14 +91,10 @@ def rebuild_content(title, pin_hash, data_lines, other_sections):
     ]
     for dl in data_lines:
         if dl.strip().startswith("- "):
-            lines.append(f"  {dl.strip()}")
+            lines.append(dl.strip())
         elif dl.strip():
             lines.append(f"- {dl.strip()}")
     lines.append("")
-    for section in other_sections:
-        lines.append("")
-        lines.append(section)
-        lines.append("")
     return "\n".join(lines) + "\n"
 
 
@@ -114,8 +108,7 @@ def update_profile(username, pin, action, search_or_line, new_line=None):
         return {"success": False, "message": "Не удалось выполнить действие. Проверьте имя и PIN."}
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
-    title, data_lines, other_sections = parse_content(content)
-    pin_hash = extract_pin_hash(content)
+    title, data_lines, pin_hash = parse_content(content)
     if action == "add":
         data_lines.append(f"- {search_or_line.strip()}" if not search_or_line.strip().startswith("- ") else search_or_line.strip())
     elif action == "replace":
@@ -132,7 +125,7 @@ def update_profile(username, pin, action, search_or_line, new_line=None):
         data_lines = [dl for dl in data_lines if search_or_line.lower() not in dl.lower()]
         if len(data_lines) == original_len:
             return {"success": False, "message": "Строка не найдена для удаления."}
-    new_content = rebuild_content(title, pin_hash, data_lines, other_sections)
+    new_content = rebuild_content(title, pin_hash, data_lines)
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(new_content)
     return {"success": True, "message": "Профиль обновлен.", "md_content": new_content}

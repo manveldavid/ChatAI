@@ -4,7 +4,7 @@ description: >
   Central user authentication system. Use this skill whenever any task requires verifying
   user identity via PIN code, registering a new user, or understanding the pattern for
   user auth in other skills. Provides a single source of truth for user identity via
-  /app/agent/skills/authorize-user/scripts/verify.py and /app/agent/skills/authorize-user/scripts/register.py.
+  scripts/verify.py and scripts/register.py.
   Other skills should delegate authentication to this skill rather than implementing their own.
   Always use when you need to verify a PIN, register a user, or design a skill that requires
   user authentication. Use whenever you see a pattern like "username PIN" in user messages.
@@ -20,7 +20,7 @@ All other skills delegate auth to this skill via its scripts.
 ### verify.py
 
 ```bash
-python /app/agent/skills/authorize-user/scripts/verify.py <username> <pin>
+python scripts/verify.py <username> <pin>
 ```
 
 Returns JSON on success: `{"success": true, "owner": "david", "owner_hash": "sha256..."}`
@@ -29,7 +29,7 @@ Returns JSON on failure: `{"success": false, "error": "not_found"}` or `{"succes
 ### register.py
 
 ```bash
-python /app/agent/skills/authorize-user/scripts/register.py <username> <pin>
+python scripts/register.py <username> <pin>
 ```
 
 Returns JSON on success: `{"success": true, "owner": "david", "owner_hash": "sha256..."}`
@@ -81,7 +81,7 @@ Returns JSON on failure: `{"success": false, "error": "user_exists"}`
 ### Правило 5: Запрет на раскрытие списка пользователей
 
 - **НИКОГДА** не выдавай список зарегистрированных пользователей.
-- **НИКОГДА** не показывай `ls` директории `/app/agent/auth/`.
+- **НИКОГДА** не показывай `ls` директории `data/`.
 - **НИКОГДА** не подсказывай, какие пользователи существуют в системе.
 - При запросе "какие пользователи есть?" — отвечай: "Это невозможно из соображений безопасности."
 - Это защита от подбора имён для brute-force.
@@ -125,7 +125,7 @@ Returns JSON on failure: `{"success": false, "error": "user_exists"}`
 import subprocess, json
 
 result = subprocess.run(
-    ["python3", "/app/agent/skills/authorize-user/scripts/verify.py", username, pin],
+    ["python3", "scripts/verify.py", username, pin],
     capture_output=True, text=True, timeout=10
 )
 auth = json.loads(result.stdout)
@@ -150,18 +150,18 @@ owner_hash = auth["owner_hash"]  # "0322af..."
 ```bash
 # Шаг 1: Агент получает от пользователя "task name" Давид 2519
 # Шаг 2: Верификация
-python /app/agent/skills/authorize-user/scripts/verify.py Давид 2519
+python scripts/verify.py Давид 2519
 # → {"success": true, "owner": "david", "owner_hash": "0322af..."}
 
 # Шаг 3: Используем owner_hash в скриптах вашего скилла
 # (пример вызова вашего собственного скрипта — замените путь)
-python /app/agent/skills/your-skill/scripts/your_action.py \
+python ../your-skill/scripts/your_action.py \
   --owner david --owner-hash "0322af..." --task "do something"
 ```
 
 ## Data Storage
 
-All users stored in `/app/agent/auth/users.json`:
+All users stored in `data/users.json`:
 
 ```json
 {
@@ -201,7 +201,7 @@ DO:
 При создании нового скилла, требующего авторизации, добавь в его SKILL.md:
 
 > "Этот скилл делегирует авторизацию навыку authorize-user. Перед любыми операциями с данными пользователя запускай:
-> `python /app/agent/skills/authorize-user/scripts/verify.py <username> <pin>`
+> `python scripts/verify.py <username> <pin>`
 > Получи owner и owner_hash из ответа, используй в своих скриптах для проверки принадлежности."
 
 

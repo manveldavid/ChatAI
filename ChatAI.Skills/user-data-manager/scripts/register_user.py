@@ -7,9 +7,10 @@ Usage:
     register_user.py <username> <pin> "line1" "line2" ...
 """
 import subprocess, sys, os, json, re, argparse, hashlib
+from pathlib import Path
 
-DATA_DIR = "/app/agent/userdata"
-AUTH_REGISTER = "/app/agent/skills/authorize-user/scripts/register.py"
+DATA_DIR = str(Path(__file__).parent.parent / "data")
+AUTH_REGISTER = str(Path(__file__).parent.parent.parent / "authorize-user" / "scripts" / "register.py")
 
 PIN_PATTERNS = [
     r'(?i)pin[:\s]*\d{3,6}',

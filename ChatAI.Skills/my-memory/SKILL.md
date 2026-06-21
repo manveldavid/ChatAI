@@ -8,19 +8,19 @@ description: Reference to the Agent's long-term memory and architectural knowled
 This skill serves as a persistent link to your "brain". Do not load the full memory content unless necessary to save context tokens.
 
 ## Where is your full memory?
-👉 **/app/agent/local/agent_manifesto.md**
+👉 **../../local/agent_manifesto.md**
 
 ## How to recall context
 When you need to know who you are or how to access your tools (like FileBrowser or Python env):
 
 ```python
 # Read your main memory file
-with open('/app/agent/local/agent_manifesto.md', 'r') as f:
+with open('../../local/agent_manifesto.md', 'r') as f:
     print(f.read())
 ```
 
 ## Your Local Domain
-You have full ownership of `/app/agent/local/`. Use it for:
+You have full ownership of `../../local/`. Use it for:
 - Custom scripts
 - Logs
 - Temporary workspace

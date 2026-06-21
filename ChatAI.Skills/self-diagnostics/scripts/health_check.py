@@ -6,6 +6,7 @@ Outputs structured JSON to stdout for the AI agent to process.
 """
 
 import sys
+from pathlib import Path
 import os
 import subprocess
 import json
@@ -93,7 +94,7 @@ def check_python_env():
     except: return {"status": "error"}
 
 def check_skills_inventory():
-    skills_dir = "/app/agent/skills"
+    skills_dir = str(Path(__file__).parent.parent.parent)
     skills = []
     if os.path.exists(skills_dir):
         for d in os.listdir(skills_dir):
@@ -103,10 +104,10 @@ def check_skills_inventory():
 
 def check_file_structure():
     try:
+        skills_root = Path(__file__).parent.parent.parent
         return {
-            "agent_dir_exists": os.path.exists("/app/agent"),
-            "skills_dir_exists": os.path.exists("/app/agent/skills"),
-            "userdata_dir_exists": os.path.exists("/app/agent/userdata"),
+            "skills_dir_exists": skills_root.exists(),
+            "skills_count": len([d for d in skills_root.iterdir() if d.is_dir()]),
             "status": "ok"
         }
     except: return {"status": "error"}

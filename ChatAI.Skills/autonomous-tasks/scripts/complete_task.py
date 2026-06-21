@@ -2,10 +2,11 @@
 """Complete a task: add report and move to completed/. Verifies owner_hash."""
 
 import argparse, os, json, sys
+from pathlib import Path
 from datetime import datetime
 
-ACTIVE_DIR = "/app/agent/tasks/active"
-COMPLETED_DIR = "/app/agent/tasks/completed"
+ACTIVE_DIR = os.environ.get("AGENT_TASKS_ACTIVE", str(Path(__file__).parent.parent / "active"))
+COMPLETED_DIR = os.environ.get("AGENT_TASKS_COMPLETED", str(Path(__file__).parent.parent / "completed"))
 
 
 def get_lock_path(filename):

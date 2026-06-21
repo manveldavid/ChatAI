@@ -5,9 +5,10 @@ Usage:
     delete_profile.py <username> <pin>
 """
 import subprocess, json, os, sys, argparse
+from pathlib import Path
 
-DATA_DIR = "/app/agent/userdata"
-AUTH_SCRIPT = "/app/agent/skills/authorize-user/scripts/verify.py"
+DATA_DIR = str(Path(__file__).parent.parent / "data")
+AUTH_SCRIPT = str(Path(__file__).parent.parent.parent / "authorize-user" / "scripts" / "verify.py")
 
 
 def find_user(username):

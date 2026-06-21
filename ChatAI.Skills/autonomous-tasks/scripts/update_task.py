@@ -2,9 +2,10 @@
 """Restore completed task to active, or remove completed report. Verifies owner_hash."""
 
 import argparse, os, json
+from pathlib import Path
 
-ACTIVE_DIR = "/app/agent/tasks/active"
-COMPLETED_DIR = "/app/agent/tasks/completed"
+ACTIVE_DIR = os.environ.get("AGENT_TASKS_ACTIVE", str(Path(__file__).parent.parent / "active"))
+COMPLETED_DIR = os.environ.get("AGENT_TASKS_COMPLETED", str(Path(__file__).parent.parent / "completed"))
 
 
 def get_lock_path(filename):

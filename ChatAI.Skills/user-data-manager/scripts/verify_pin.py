@@ -6,8 +6,9 @@ Usage:
     verify_pin.py <username> <pin>
 """
 import subprocess, json, os, sys, argparse
+from pathlib import Path
 
-DATA_DIR = "/app/agent/userdata"
+DATA_DIR = str(Path(__file__).parent.parent / "data")
 
 
 def find_user_file(username):
@@ -32,7 +33,7 @@ def find_user_file(username):
 
 def verify_pin(username, pin):
     """Verify PIN via authorize-user, then return profile content."""
-    AUTH_SCRIPT = "/app/agent/skills/authorize-user/scripts/verify.py"
+    AUTH_SCRIPT = str(Path(__file__).parent.parent.parent / "authorize-user" / "scripts" / "verify.py")
 
     if not os.path.exists(AUTH_SCRIPT):
         return {"success": False, "message": "Система авторизации недоступна", "md_content": None}

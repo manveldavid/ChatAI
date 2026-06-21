@@ -17,7 +17,7 @@ Skill for interacting with a [FileBrowser](https://filebrowser.org/) server prog
 ## Using the Python Client
 
 The skill includes a pre-built Python client at `references/filebrowser-client.py`
-(`/app/agent/skills/filebrowser/references/filebrowser-client.py`).
+(`references/filebrowser-client.py`).
 
 Use `importlib.util` to dynamically load the client module into your code:
 
@@ -27,7 +27,7 @@ import sys
 
 spec = importlib.util.spec_from_file_location(
     "filebrowser_client",
-    "/app/agent/skills/filebrowser/references/filebrowser-client.py"
+    "references/filebrowser-client.py"
 )
 fb_mod = importlib.util.module_from_spec(spec)
 sys.modules["filebrowser_client"] = fb_mod

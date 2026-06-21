@@ -24,7 +24,7 @@ Run a comprehensive health check of the container.
 
 ```
 RunPythonScript(
-    scriptFullPath="/app/agent/skills/self-diagnostics/scripts/health_check.py",
+    scriptFullPath="scripts/health_check.py",
     args=["full"]  # options: "quick", "full", "network"
 )
 ```

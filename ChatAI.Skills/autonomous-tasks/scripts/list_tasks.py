@@ -2,9 +2,10 @@
 """List tasks for an authenticated user. Verifies owner_hash."""
 
 import argparse, os, json, glob
+from pathlib import Path
 
-ACTIVE_DIR = "/app/agent/tasks/active"
-COMPLETED_DIR = "/app/agent/tasks/completed"
+ACTIVE_DIR = os.environ.get("AGENT_TASKS_ACTIVE", str(Path(__file__).parent.parent / "active"))
+COMPLETED_DIR = os.environ.get("AGENT_TASKS_COMPLETED", str(Path(__file__).parent.parent / "completed"))
 
 
 def parse_task_file(filepath):

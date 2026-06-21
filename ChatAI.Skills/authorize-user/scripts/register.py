@@ -5,8 +5,9 @@ Usage: register.py <username> <pin>
 Returns JSON with success status.
 """
 import hashlib, json, os, sys
+from pathlib import Path
 
-DATA_DIR = "/app/agent/auth"
+DATA_DIR = str(Path(__file__).parent.parent / "data")
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 
 CYR_TO_LAT = {

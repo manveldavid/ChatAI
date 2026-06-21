@@ -2,10 +2,11 @@
 """Create a new autonomous task file. Verifies owner_hash before creation."""
 
 import argparse, os, json, sys, time, uuid
+from pathlib import Path
 from datetime import datetime
 
-ACTIVE_DIR = "/app/agent/tasks/active"
-COMPLETED_DIR = "/app/agent/tasks/completed"
+ACTIVE_DIR = os.environ.get("AGENT_TASKS_ACTIVE", str(Path(__file__).parent.parent / "active"))
+COMPLETED_DIR = os.environ.get("AGENT_TASKS_COMPLETED", str(Path(__file__).parent.parent / "completed"))
 
 
 def get_lock_path(filename):
@@ -40,7 +41,7 @@ def remove_lock_file(filename):
 
 
 def verify_owner_hash(owner_hash):
-    DATA_FILE = "/app/agent/auth/users.json"
+    DATA_FILE = str(Path(__file__).parent.parent.parent / "authorize-user" / "data" / "users.json")
     if not os.path.exists(DATA_FILE):
         return False, None
     with open(DATA_FILE, "r", encoding="utf-8") as f:
