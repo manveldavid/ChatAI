@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ChatAI.CLI/ChatAI.CLI.csproj" />
+  <Project Path="ChatAI.Shared/ChatAI.Shared.csproj" />
+  <Project Path="ChatAI.TelegramBotServer/ChatAI.TelegramBotServer.csproj" />
+</Solution>

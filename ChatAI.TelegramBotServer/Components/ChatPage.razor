@@ -1,0 +1,204 @@
+@page "/"
+@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+@inject AgentClient AgentClient
+@inject ILocalStorageService LocalStorage
+
+<FluentStack Style="width:100%; height:100%; padding:8px;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.SpaceBetween">
+    <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Top">
+        <FluentButton OnClick="@(() => settingsOpened = !settingsOpened)">Settings</FluentButton>
+        <FluentButton Appearance="Appearance.Outline" OnClick="NewChat">New</FluentButton>
+    </FluentStack>
+
+    @if (settingsOpened)
+    {
+        <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Top">
+            <FluentLabel>Settings</FluentLabel>
+            <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.SpaceBetween">
+                <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentTextField Label="User ID" @bind-Value="userIdStr" />
+                    <FluentButton Appearance="Appearance.Outline" OnClick="UserIdParse">Find</FluentButton>
+                </FluentStack>
+                @if(user is not null)
+                {
+                    <FluentTextField Label="Model" @bind-Value="user.Model" />
+                    <FluentTextArea Label="Instruction" @bind-Value="user.Instruction"  />
+                    <FluentCheckbox Label="Tools" @bind-Value="user.Tools" />
+                    <FluentCheckbox Label="Skills" @bind-Value="user.Skills" />
+                }
+            </FluentStack>
+        </FluentStack>
+    }
+    else
+    {
+        <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Bottom">
+            <FluentStack Style="width:100%; height:80%;max-height:80%;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Bottom">
+                @if(user is not null)
+                {
+                    @foreach (var message in user.History.Messages)
+                    {
+                        if(message.Role == ChatRole.User)
+                        {
+                            <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Right">
+                                @(GetMarkup(message.Content))
+                            </FluentStack>
+                        }
+                        else
+                        {
+                            <FluentStack Style="width:100%; height:100%;background-color:#e0e0e0;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Left">
+                                @(GetMarkup(message.Content))
+                            </FluentStack>
+                        }
+                    }   
+                }
+                <FluentStack Style="width:100%; height:100%;background-color:#e0d0e0;" Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Left">
+                    @(GetMarkup(GetStreamedText()))
+                </FluentStack>
+
+            </FluentStack>
+            <FluentStack Style="width:100%; height:100%;" Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentTextArea Style="width:100%;height:100%;" @bind-Value="userInput" />
+                <FluentStack Style="width:fit-content;height:100%;" Orientation="Orientation.Vertical" VerticalAlignment="VerticalAlignment.Bottom">
+                    <FluentButton Appearance="Appearance.Outline" OnClick="SendMessage">Send</FluentButton>
+                    <FluentInputFile
+                        DragDropZoneVisible="false"
+                        Mode="InputFileMode.Stream"
+                        AnchorId="UploadButton"
+                        MaximumFileSize="@(long.MaxValue)"
+                        OnFileUploaded="@OnFileUploaded" />
+
+                    @if (user is not null && user.History.Additions.Any())
+                    {
+                        <FluentButton 
+                            IconEnd="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.Checkmark())" 
+                            Appearance="Appearance.Accent" Id="UploadButton">Upload</FluentButton>
+                    }
+                    else
+                    {
+                        <FluentButton Appearance="Appearance.Outline" Id="UploadButton">Upload</FluentButton>
+                    }
+                </FluentStack>
+            </FluentStack>
+        </FluentStack>
+    }
+
+</FluentStack>
+    
+@code {
+    private string userInput = string.Empty;
+    private StringBuilder sb = new();
+    private bool settingsOpened = false; 
+    private bool isLoading;
+    private long userId;
+    private string userIdStr;
+    private User user;
+    private CancellationTokenSource RenderCTS = new();
+
+    private MarkupString GetMarkup(string markdown) => 
+        (MarkupString)Markdown.ToHtml(
+            markdown
+            .Replace("|\n|", "|\n\n|")
+            .Replace("|\r\n|", "|\n\n|")
+        );
+    
+    private async Task OnFileUploaded(FluentInputFileEventArgs args)
+    {
+        if (args.Stream is null)
+            return;
+
+        await user.History.AddAdditionAsync(args.Stream, args.Name);
+        await args.Stream.DisposeAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        userIdStr = await LocalStorage.GetItemAsStringAsync("userIdStr");
+        await UserIdParse();
+        _ = RenderAsync(RenderCTS.Token);
+    }
+    public async Task RenderAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(300, cancellationToken);
+        }
+    }
+    public void Dispose()
+    {
+        RenderCTS.Cancel();
+        RenderCTS.Dispose();
+    }
+    public async Task UserIdParse()
+    {
+        if (string.IsNullOrEmpty(userIdStr))
+            return;
+
+        userId = long.TryParse(userIdStr, out var result) ? result : userId;
+        user = AgentClient.Users.TryGetValue(userId, out var savedUser) ? savedUser : new();
+
+        if (savedUser is null)
+            AgentClient.Users.Add(userId, user);
+
+        await LocalStorage.SetItemAsStringAsync("userIdStr", userIdStr);
+    }
+    private void NewChat() {
+        userInput = string.Empty;
+        sb.Clear();
+
+        if (user is null)
+            return;
+
+        user.IsThinking = false;
+        user.History.Session = null;
+        user.History.Messages.Clear();
+        user.History.Additions.Clear();
+    }
+    private string GetStreamedText()
+    {
+        var text = sb.ToString();
+
+        if (user is not null && user.IsThinking)
+            text += "\n\nThinking ...";
+
+        return text;
+    }
+    private async Task SendMessage()
+    {
+        var newMessage = new AppChatMessage() { Role = ChatRole.User, Content = userInput.Trim() };
+        var agent = AgentClient.GetAIAgentForUser(AgentClient.Client, user);
+
+        if (string.IsNullOrEmpty(newMessage.Content) || user is null || agent is null)
+            return;
+
+        if (user.History.Session is null)
+            user.History.Session = await agent.CreateSessionAsync();
+
+        userInput = string.Empty;
+        user.History.Messages.Add(newMessage);
+
+        var contents = new List<AIContent>() { new TextContent(newMessage.Content) };
+
+        foreach (var data in user.History.Additions)
+            contents.Add(new DataContent(data.Data, data.MediaType));
+
+        await foreach (var chunk in agent.RunStreamingAsync(new ChatMessage() { Contents = contents }, user.History.Session))
+        {
+            var textChunk = chunk.ToString();
+
+            if (string.IsNullOrEmpty(textChunk))
+                user.IsThinking = true;
+            else if (user.IsThinking)
+                user.IsThinking = false;
+
+            sb.Append(textChunk);
+        }
+
+        user.History.Additions.Clear();
+        user.History.Messages.Add(new AppChatMessage() { Role = ChatRole.Assistant, Content = sb.ToString() });
+        sb.Clear();
+        user.IsThinking = false;
+    }
+}
