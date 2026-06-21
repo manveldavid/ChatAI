@@ -52,11 +52,6 @@ namespace ChatAI.Shared
             return output.Trim();
         }
 
-        private static void SetArguments(ProcessStartInfo psi, string[] args)
-        {
-            throw new NotImplementedException();
-        }
-
         public static async Task<string> RunPythonCodeAsync(string code, CancellationToken cancellationToken = default)
         {
             var scriptDirectory = Path.Combine(AgentClient.User.BinPath, "agent", "scripts");
@@ -96,11 +91,22 @@ namespace ChatAI.Shared
         }
         public static void SetArguments(ProcessStartInfo processStartInfo, IEnumerable<string> args)
         {
-            processStartInfo.Arguments = String.Join(" ", args.Select(arg => {
-                if (arg.Contains('"')) arg = arg.Replace("\"", "\"\"");
-                if (arg.Contains(' ')) arg = '"' + arg + '"';
-                return arg;
-            }));
+            var processedArgs = new List<string>();
+
+            foreach (var arg in args) 
+            {
+                var processedArg = arg;
+
+                if (processedArg.Contains('"')) 
+                    processedArg = processedArg.Replace("\"", "\\\"");
+
+                if (processedArg.Contains(' ')) 
+                    processedArg = '"' + processedArg + '"';
+
+                processedArgs.Add(processedArg);
+            }
+
+            processStartInfo.Arguments = string.Join(" ", processedArgs);
         }
     }
 }
