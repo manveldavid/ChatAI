@@ -47,9 +47,7 @@ namespace ChatAI.Shared
             var agent = AgentClient.GetAIAgentForUser(agentClient.Client, new AgentClient.User()
             {
                 Instruction = "run_skill_script tool is prohibited use RunPythonScript instead",
-                Model = "qwen/qwen3.7-plus",
-                Tools = true,
-                Skills = true,
+                Model = "qwen/qwen3.7-plus"
             });
 
             File.Delete(taskFile);

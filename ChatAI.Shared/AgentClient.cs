@@ -19,8 +19,6 @@ namespace ChatAI.Shared
             public static string SkillDirectory => Path.Combine(BinPath, "agent", "skills");
             public string Model { get; set; } = "qwen/qwen3.7-plus";
             public string Instruction { get; set; } = string.Empty;
-            public bool Tools { get; set; }
-            public bool Skills { get; set; }
             public bool IsThinking { get; set; }
             public History History { get; set; } = new History();
         }
@@ -58,33 +56,27 @@ namespace ChatAI.Shared
             if (!Directory.Exists(User.SkillDirectory))
                 Directory.CreateDirectory(User.SkillDirectory);
 
-            var agentOptions = new ChatClientAgentOptions();
+            var preInstruction = $"IMPORTANT! -> your skill directory: '{User.SkillDirectory}'.\nIMPORTANT! -> your working directory: '{Directory.GetCurrentDirectory()}'.\nIMPORTANT! -> 'run_skill_script' tool is prohibited then use 'RunPythonScript' tool instead.\n\n";
 
-            if (user.Tools)
+            var agentOptions = new ChatClientAgentOptions()
             {
-                agentOptions.ChatOptions = new ChatOptions()
+                ChatOptions = new ChatOptions()
                 {
                     Tools = new List<AITool>()
                     {
                         AIFunctionFactory.Create((Func<string,int,string>)PythonRunner.RunPythonCode),
                         AIFunctionFactory.Create((Func<string,string[],int,string>)PythonRunner.RunPythonScript),
                         AIFunctionFactory.Create((Func<string[],int,string>)PythonRunner.RunPython),
-                    }
-                };
-            }
-
-            if (user.Skills)
-            {
-                agentOptions.AIContextProviders = new List<AIContextProvider>()
+                    },
+                    Instructions = preInstruction
+                },
+                AIContextProviders = new List<AIContextProvider>()
                 {
 #pragma warning disable MAAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
                     new AgentSkillsProvider(User.SkillDirectory)
 #pragma warning restore MAAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                };
-            }
-
-            var preInstruction = $"IMPORTANT! -> your skill directory: '{User.SkillDirectory}'.\nIMPORTANT! -> your working directory: '{Directory.GetCurrentDirectory()}'.\nIMPORTANT! -> 'run_skill_script' tool is prohibited then use 'RunPythonScript' tool instead.\n\n";
-            agentOptions.ChatOptions.Instructions = preInstruction;
+                }
+            };
 
             if (!string.IsNullOrEmpty(user.Instruction))
             {

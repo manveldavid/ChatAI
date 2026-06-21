@@ -14,12 +14,10 @@ public class TelegramBot
         public const string Start = "/start";
         public const string Clear = "/clear";
         public const string SetModel = "/setmodel";
-        public const string Tools = "/tools";
-        public const string Skills = "/skills";
         public const string Instruction = "/instruction";
         public const string Id = "/id";
 
-        public static string[] Commands = [Start, Clear, SetModel, Tools, Skills, Instruction, Id];
+        public static string[] Commands = [Start, Clear, SetModel, Instruction, Id];
     }
     public async Task RunAsync(AgentClient agentClient, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
@@ -135,10 +133,6 @@ public class TelegramBot
                                 user.History.Messages.Clear();
                                 user.History.Additions.Clear();
                             }
-                            else if (messageText.StartsWith(Command.Tools))
-                                user.Tools = !user.Tools;
-                            else if (messageText.StartsWith(Command.Skills))
-                                user.Skills = !user.Skills;
 
                             continue;
                         }
