@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ namespace ChatAI.Shared
 {
     public static class PythonRunner
     {
-        [Description("Run python code.")]
+        [Description("Run python code. Code must contain only utf-8 characters otherwise it is fall with error.")]
         public static string RunPythonCode([Description("Raw python code here.")] string code, [Description("Await run code timeout in seconds (by default 10).")] int timeoutSeconds = 10)
             => ThreadWrapper(() => RunPythonCodeAsync(code), timeoutSeconds);
         [Description("Run python binary with args.")]
@@ -58,6 +58,16 @@ namespace ChatAI.Shared
 
             if (!Directory.Exists(scriptDirectory))
                 Directory.CreateDirectory(scriptDirectory);
+
+            var importSys = "import sys";
+            var useUtf8 = "sys.stdout.reconfigure(encoding='utf-8')";
+            if(!code.Contains(importSys) || !code.Contains(useUtf8))
+            {
+                if(!code.Contains(importSys) && !code.Contains(useUtf8))
+                    code = importSys + "\n" + useUtf8 + "\n" + code;
+                else if(!code.Contains(importSys))
+                    code = importSys + "\n" + code;
+            }
 
             var scriptName = Guid.NewGuid().ToString().ToLower().Replace("-", "") + ".py";
             var scriptFullPath = Path.Combine(scriptDirectory, scriptName);
