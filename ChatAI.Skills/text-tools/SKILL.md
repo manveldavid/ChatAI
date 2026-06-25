@@ -1,6 +1,6 @@
 ---
 name: text-tools
-description: Comprehensive toolkit for working with text files. Use this skill whenever the user needs to search text in files (grep, find text, search patterns), replace text in files (find and replace, batch replace), compare files (diff, compare text files), process text (remove duplicates, sort lines, extract CSV columns, count lines/words), check text file formatting (encoding, line endings, trailing whitespace, tabs), or validate structured files (CSV, JSON, YAML). Always trigger when the user mentions text search, grep, find in files, replace text, compare files, diff, sort lines, remove duplicates, CSV columns, check encoding, validate JSON/YAML/CSV, or any text file manipulation task. This skill works with any text files in UTF-8 or other encodings with automatic detection.
+description: Comprehensive toolkit for working with text files. Use this skill whenever the user needs to search text in files (grep, find text, search patterns), replace text in files (find and replace, batch replace), compare files (diff, compare text files), process text (remove duplicates, sort lines, extract CSV columns, count lines/words), read/insert/delete/replace specific line ranges in files (slice, extract method body, edit by line number), check text file formatting (encoding, line endings, trailing whitespace, tabs), or validate structured files (CSV, JSON, YAML). Always trigger when the user mentions text search, grep, find in files, replace text, compare files, diff, sort lines, remove duplicates, CSV columns, check encoding, validate JSON/YAML/CSV, read specific lines, extract lines by number, delete lines, insert at line, or any text file manipulation task. This skill works with any text files in UTF-8 or other encodings with automatic detection.
 ---
 
 # Text Tools
@@ -142,6 +142,78 @@ python scripts/text_process.py tail file.txt    # last 10 lines
 **General options:**
 - `--encoding ENC` — force encoding
 - `-o FILE, --output FILE` — output to file
+
+### Slice (Line-Range Operations)
+```bash
+python scripts/text_slice.py <command> <file> [options]
+```
+Read, insert, delete, or replace specific line ranges. Designed for large files
+where you need precise line-level access (e.g., read a method body after finding
+it via grep).
+
+**Commands:**
+
+#### Read Lines
+```bash
+python scripts/text_slice.py read file.txt --from 100 --to 200
+python scripts/text_slice.py read file.txt --line 150 --around 50   # lines 100-200
+python scripts/text_slice.py read file.txt --last 50
+python scripts/text_slice.py read file.txt --from 100 --to 200 -n   # with line numbers
+```
+Options:
+- `--from N` — start line (1-based, inclusive, default: 1)
+- `--to N` — end line (1-based, inclusive, default: last line)
+- `--line N` — center line for `--around` mode
+- `--around N` — read N lines before and after `--line`
+- `--last N` — show last N lines of file
+- `-n, --line-numbers` — show line numbers in output
+- `--no-color` — disable colored line numbers
+
+#### Insert Lines
+```bash
+python scripts/text_slice.py insert file.txt --line 100 --content "new text"
+python scripts/text_slice.py insert file.txt --line 100 --file patch.txt
+python scripts/text_slice.py insert file.txt --line 100 --content "line1\nline2"
+```
+Options:
+- `--line N` — insert BEFORE this line (1-based)
+- `--content TEXT` — text to insert (use `\n` for newlines)
+- `--file FILE` — file whose contents to insert
+- `-b, --backup` — create .bak backup before modifying
+- `-n, --dry-run` — show what would be inserted
+
+#### Delete Lines
+```bash
+python scripts/text_slice.py delete file.txt --from 100 --to 200
+python scripts/text_slice.py delete file.txt --line 150              # single line
+python scripts/text_slice.py delete file.txt --from 100 --to 200 -n  # dry run
+python scripts/text_slice.py delete file.txt --from 100 --to 200 -b  # with backup
+```
+Options:
+- `--from N` — start line (1-based, inclusive)
+- `--to N` — end line (1-based, inclusive, default: same as `--from`)
+- `--line N` — delete single line
+- `-n, --dry-run` — show what would be deleted
+- `-b, --backup` — create .bak backup
+
+#### Replace Lines
+```bash
+python scripts/text_slice.py replace file.txt --from 100 --to 200 --content "new text"
+python scripts/text_slice.py replace file.txt --from 100 --to 200 --file patch.txt
+python scripts/text_slice.py replace file.txt --line 150 --content "replacement"
+```
+Options:
+- `--from N` — start line (1-based, inclusive)
+- `--to N` — end line (1-based, inclusive, default: same as `--from`)
+- `--line N` — replace single line
+- `--content TEXT` — replacement text (use `\n` for newlines)
+- `--file FILE` — file whose contents to use as replacement
+- `-n, --dry-run` — show what would change
+- `-b, --backup` — create .bak backup
+
+**General options (all commands):**
+- `--encoding ENC` — force encoding
+- `-o FILE, --output FILE` — output to file (for read: stdout by default; for write ops: in-place)
 
 ### Check Formatting
 ```bash
@@ -308,6 +380,29 @@ python scripts/text_diff.py -s old.txt new.txt
 python scripts/text_diff.py --ignore-whitespace old.txt new.txt
 ```
 
+### Navigate and edit large files by line number
+```bash
+# Find a method via grep, get its line number
+python scripts/text_grep.py "public void ProcessItem" src/ --include "*.cs"
+# Output: src/Services/ItemService.cs:247: public void ProcessItem(Item item)
+
+# Read the method body (line 247 ± 50 lines)
+python scripts/text_slice.py read src/Services/ItemService.cs --line 247 --around 50 -n
+
+# Read exact range
+python scripts/text_slice.py read src/Services/ItemService.cs --from 247 --to 310 -n
+
+# Delete a block of lines (with dry-run first!)
+python scripts/text_slice.py delete src/Services/ItemService.cs --from 280 --to 295 -n
+python scripts/text_slice.py delete src/Services/ItemService.cs --from 280 --to 295 -b
+
+# Replace a block with new content from a file
+python scripts/text_slice.py replace src/Services/ItemService.cs --from 280 --to 295 --file fix.txt -b
+
+# Insert new code before a specific line
+python scripts/text_slice.py insert src/Services/ItemService.cs --line 247 --file preamble.txt -b
+```
+
 ## Tips
 
 1. **Always use dry-run first** for replacements: `text_replace.py -n` shows what would change without modifying files
@@ -316,6 +411,9 @@ python scripts/text_diff.py --ignore-whitespace old.txt new.txt
 4. **JSON output** is great for programmatic processing: add `--json` to any command
 5. **Context lines** help understand grep matches: `-C 3` shows 3 lines before and after
 6. **Check before commit**: run `text_check.py --all` to ensure file formatting is correct
+7. **Grep → Slice workflow**: find a method with `text_grep.py`, note its line number, then use `text_slice.py read --line N --around 50` to read the method body
+8. **Always dry-run before delete/replace**: `text_slice.py delete --from X --to Y -n` shows what would be removed
+9. **Use `--backup`** when modifying files in-place: `text_slice.py delete --from X --to Y -b` creates a .bak
 
 ## Troubleshooting
 
